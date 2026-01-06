@@ -1,0 +1,11 @@
+{
+  "month": 4,
+  "year": 2023,
+  "total_transactions": 371,
+  "failed_transactions": 83,
+  "success_rate": 0.7762803234501348,
+  "failure_rate": 0.22371967654986524,
+  "total_amount": 25838.53939045095,
+  "avg_transaction_amount": 69.64565873436914,
+  "summary": "\n            Monthly Report for 2023-04\n            ================================\n            Total Transactions: 371\n            Failed Transactions: 83\n            Success Rate: 77.63%\n            Total Transaction Amount: $25,838.54\n            Average Transaction Amount: $69.65\n            "
+}
