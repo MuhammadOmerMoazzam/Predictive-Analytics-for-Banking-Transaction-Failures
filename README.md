@@ -321,6 +321,12 @@ The API provides the following endpoints:
 - **Description**: Generate comprehensive analytics report
 - **Response**: Complete analytics report with recommendations
 
+### Frontend Integration
+The Failure-Shield frontend connects to the backend API through proxy routes:
+- **Analytics Dashboard**: Displays transaction analysis, performance metrics, and recommendations
+- **API Key Management**: Secure API key generation and management
+- **Real-time Reporting**: Live data from the prediction models
+
 ## Integration
 
 ### Apache Fineract Integration
