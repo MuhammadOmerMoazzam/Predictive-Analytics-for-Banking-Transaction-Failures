@@ -298,6 +298,29 @@ The API provides the following endpoints:
 - **Method**: GET
 - **Description**: Alternative API documentation (ReDoc)
 
+### `/reports/transaction-analysis`
+- **Method**: GET
+- **Description**: Get transaction analysis report
+- **Response**: Summary of transaction patterns and failure rates
+
+### `/reports/performance-metrics`
+- **Method**: GET
+- **Description**: Get model performance metrics report
+- **Response**: Accuracy, precision, recall, F1-score, and other metrics
+
+### `/reports/monthly-summary/{year}/{month}`
+- **Method**: GET
+- **Description**: Get monthly transaction summary report
+- **Parameters**:
+  - `year`: Year for the report (e.g., 2023)
+  - `month`: Month for the report (1-12)
+- **Response**: Monthly transaction summary with failure analysis
+
+### `/reports/generate-full-report`
+- **Method**: GET
+- **Description**: Generate comprehensive analytics report
+- **Response**: Complete analytics report with recommendations
+
 ## Integration
 
 ### Apache Fineract Integration

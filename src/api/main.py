@@ -8,6 +8,7 @@ prediction services using the trained machine learning models.
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 import joblib
 import pandas as pd
 import numpy as np
@@ -142,18 +143,30 @@ def predict_transaction_failure(transaction: TransactionRequest):
         raise HTTPException(status_code=500, detail="Model or scaler not loaded")
     
     try:
-        # Convert transaction to DataFrame
-        transaction_df = pd.DataFrame([{
-            'transaction_amount': transaction.transaction_amount,
-            'account_balance': transaction.account_balance,
-            'time_of_day': transaction.time_of_day,
-            'day_of_week': transaction.day_of_week,
-            'transaction_type': transaction.transaction_type,
-            'location': transaction.location,
-            'merchant_category': transaction.merchant_category,
-            'location_risk_score': transaction.location_risk_score,
-            'historical_failure_rate': transaction.historical_failure_rate
-        }])
+        # Convert transaction to DataFrame with features in the exact order used during training
+        # The order is: transaction_amount, time_of_day, day_of_week, transaction_type,
+        # location, account_balance, historical_failure_rate, merchant_category, location_risk_score
+        transaction_df = pd.DataFrame([[
+            transaction.transaction_amount,
+            transaction.time_of_day,
+            transaction.day_of_week,
+            transaction.transaction_type,
+            transaction.location,
+            transaction.account_balance,
+            transaction.historical_failure_rate,
+            transaction.merchant_category,
+            transaction.location_risk_score
+        ]], columns=[
+            'transaction_amount',
+            'time_of_day',
+            'day_of_week',
+            'transaction_type',
+            'location',
+            'account_balance',
+            'historical_failure_rate',
+            'merchant_category',
+            'location_risk_score'
+        ])
         
         # Apply label encoding if available
         if label_encoders:
@@ -211,22 +224,34 @@ def predict_transaction_batch(transactions: TransactionBatchRequest):
         raise HTTPException(status_code=500, detail="Model or scaler not loaded")
     
     try:
-        # Convert transactions to DataFrame
-        transaction_data = []
+        # Convert transactions to DataFrame with features in the exact order used during training
+        # The order is: transaction_amount, time_of_day, day_of_week, transaction_type,
+        # location, account_balance, historical_failure_rate, merchant_category, location_risk_score
+        transaction_rows = []
         for t in transactions.transactions:
-            transaction_data.append({
-                'transaction_amount': t.transaction_amount,
-                'account_balance': t.account_balance,
-                'time_of_day': t.time_of_day,
-                'day_of_week': t.day_of_week,
-                'transaction_type': t.transaction_type,
-                'location': t.location,
-                'merchant_category': t.merchant_category,
-                'location_risk_score': t.location_risk_score,
-                'historical_failure_rate': t.historical_failure_rate
-            })
-        
-        transaction_df = pd.DataFrame(transaction_data)
+            transaction_rows.append([
+                t.transaction_amount,
+                t.time_of_day,
+                t.day_of_week,
+                t.transaction_type,
+                t.location,
+                t.account_balance,
+                t.historical_failure_rate,
+                t.merchant_category,
+                t.location_risk_score
+            ])
+
+        transaction_df = pd.DataFrame(transaction_rows, columns=[
+            'transaction_amount',
+            'time_of_day',
+            'day_of_week',
+            'transaction_type',
+            'location',
+            'account_balance',
+            'historical_failure_rate',
+            'merchant_category',
+            'location_risk_score'
+        ])
         
         # Apply label encoding if available
         if label_encoders:
@@ -282,17 +307,17 @@ def get_model_info():
     """
     if model is None:
         return {"error": "Model not loaded"}
-    
+
     # Get model type
     model_type = type(model).__name__
-    
+
     # Get feature names if available (this depends on the model type)
     feature_info = {}
     if hasattr(model, 'feature_importances_'):
         feature_info['has_feature_importances'] = True
     elif hasattr(model, 'coef_'):
         feature_info['has_coefficients'] = True
-    
+
     return {
         "model_type": model_type,
         "model_loaded": model is not None,
@@ -300,6 +325,147 @@ def get_model_info():
         "features_count": getattr(model, 'n_features_in_', 'unknown'),
         "feature_info": feature_info
     }
+
+
+# Report-related endpoints
+@app.get("/reports/transaction-analysis")
+def get_transaction_analysis():
+    """
+    Get transaction analysis report.
+    """
+    try:
+        # For demo purposes, return sample transaction analysis
+        # In a real implementation, this would load from saved reports
+        return {
+            "report_type": "transaction_analysis",
+            "generated_at": datetime.now().isoformat(),
+            "summary": {
+                "total_transactions": 5000,
+                "failed_transactions": 877,
+                "success_rate": 0.8246,
+                "average_transaction_amount": 150.25,
+                "failure_rate_by_type": {
+                    "debit": 0.18,
+                    "credit": 0.15
+                },
+                "failure_rate_by_location": {
+                    "local": 0.12,
+                    "national": 0.16,
+                    "international": 0.22
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error generating transaction analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
+
+
+@app.get("/reports/performance-metrics")
+def get_performance_metrics():
+    """
+    Get model performance metrics report.
+    """
+    try:
+        # For demo purposes, return sample performance metrics
+        # In a real implementation, this would load from saved reports
+        return {
+            "report_type": "performance_metrics",
+            "generated_at": datetime.now().isoformat(),
+            "metrics": {
+                "accuracy": 0.81,
+                "precision": 0.185,
+                "recall": 0.0265,
+                "f1_score": 0.0463,
+                "roc_auc": 0.51  # Placeholder value
+            },
+            "model_info": {
+                "model_type": "naive_bayes",
+                "training_samples": 4000,
+                "testing_samples": 1000
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error generating performance metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
+
+
+@app.get("/reports/monthly-summary/{year}/{month}")
+def get_monthly_summary(year: int, month: int):
+    """
+    Get monthly transaction summary report.
+
+    Args:
+        year: Year for the report (e.g., 2023)
+        month: Month for the report (1-12)
+    """
+    try:
+        # Validate inputs
+        if not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="Month must be between 1 and 12")
+        if year < 2000 or year > 2100:
+            raise HTTPException(status_code=400, detail="Year must be between 2000 and 2100")
+
+        # For demo purposes, return sample monthly summary
+        # In a real implementation, this would load from saved reports
+        return {
+            "report_type": "monthly_summary",
+            "year": year,
+            "month": month,
+            "generated_at": datetime.now().isoformat(),
+            "summary": {
+                "total_transactions": 420,
+                "failed_transactions": 75,
+                "success_rate": 0.8214,
+                "total_amount": 63500.75,
+                "average_transaction_amount": 151.19,
+                "top_failure_reasons": [
+                    {"reason": "high_amount_risk", "count": 32},
+                    {"reason": "high_location_risk", "count": 21},
+                    {"reason": "high_historical_failure", "count": 15},
+                    {"reason": "model_prediction", "count": 7}
+                ]
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating monthly summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
+
+
+@app.get("/reports/generate-full-report")
+def generate_full_report():
+    """
+    Generate a comprehensive analytics report.
+    This would typically take some time to process.
+    """
+    try:
+        # For demo purposes, return sample comprehensive report
+        # In a real implementation, this would perform actual analytics
+        return {
+            "report_type": "comprehensive_analytics",
+            "generated_at": datetime.now().isoformat(),
+            "processing_status": "completed",
+            "sections": [
+                "transaction_analysis",
+                "model_performance",
+                "failure_patterns",
+                "recommendations"
+            ],
+            "summary": {
+                "total_transactions_analyzed": 5000,
+                "report_sections": 4,
+                "recommendations_count": 3
+            },
+            "recommendations": [
+                "Consider additional verification for transactions over $1000",
+                "Monitor international transactions more closely",
+                "Review accounts with historical failure rate > 0.5"
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error generating full report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Report generation error: {str(e)}")
 
 # Additional endpoints for model management (for development purposes)
 @app.post("/reload_model")
